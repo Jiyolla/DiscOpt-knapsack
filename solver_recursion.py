@@ -2,8 +2,6 @@
 # -*- coding: utf-8 -*-
 
 
-import timeit
-import cProfile
 from collections import namedtuple
 import copy
 
@@ -37,7 +35,6 @@ def solve_it(input_data):
     taken = [0] * len(items)
     caches = {}
 
-    start = timeit.default_timer()
     def oracle(n, k):
         if n < 1:
             emptylist = []
@@ -66,8 +63,6 @@ def solve_it(input_data):
                 return v_ntake, t_ntake
 
     value, taken = oracle(item_count, capacity)
-    end = timeit.default_timer()
-    print(end - start)
 
     # prepare the solution in the specified output format
     output_data = str(value) + " " + str(1) + "\n"
@@ -82,8 +77,7 @@ if __name__ == "__main__":
         file_location = sys.argv[1].strip()
         with open(file_location, "r") as input_data_file:
             input_data = input_data_file.read()
-        # cProfile.run('print(solve_it(input_data))')
-        print(timeit.timeit('print(solve_it(input_data))', number=10, globals=globals()))
+        print(solve_it(input_data))
     else:
         print(
             "This test requires an input file.  Please select one from the data directory. (i.e. python solver.py ./data/ks_4_0)"

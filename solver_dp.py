@@ -1,8 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import cProfile
-import timeit
+
 from collections import namedtuple
 
 Item = namedtuple("Item", ["index", "value", "weight"])
@@ -33,19 +32,15 @@ def solve_it(input_data):
 
     table = [[0 for x in range(capacity + 1)] for x in range(item_count + 1)]
 
-    start = timeit.default_timer()
     for i in range(1, item_count + 1):
-        for j in range(0, capacity + 1):
-            item = items[i - 1]
-            if item.weight > j:
-                table[i][j] = table[i - 1][j]
-                continue
+        item = items[i - 1]
+        threshold = min(item.weight, capacity + 1)
+        for j in range(0, threshold):
+            table[i][j] = table[i - 1][j]
+        for j in range(threshold, capacity + 1):
             # Value when taking the item
             v_take = item.value + table[i - 1][j - item.weight]
             table[i][j] = max(v_take, table[i - 1][j])
-    end = timeit.default_timer()
-
-    print(end - start)
 
     value = table[item_count][capacity]
 
@@ -70,8 +65,7 @@ if __name__ == "__main__":
         file_location = sys.argv[1].strip()
         with open(file_location, "r") as input_data_file:
             input_data = input_data_file.read()
-        # cProfile.run('print(solve_it(input_data))')
-        print(timeit.timeit('print(solve_it(input_data))', number=10, globals=globals()))
+        print(solve_it(input_data))
     else:
         print(
             "This test requires an input file.  Please select one from the data directory. (i.e. python solver.py ./data/ks_4_0)"

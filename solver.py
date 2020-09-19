@@ -38,7 +38,9 @@ def solve_it(input_data):
         j = numpy.arange(capacity + 1 - threshold) + threshold
         j_m_iw = j - item.weight
         v_take = item.value + table[i - 1][j_m_iw]
-        table[i][threshold:capacity + 1] = numpy.maximum(v_take, table[i - 1][threshold:capacity + 1])
+        table[i][threshold : capacity + 1] = numpy.maximum(
+            v_take, table[i - 1][threshold : capacity + 1]
+        )
     # end = timeit.default_timer()
     # print(end - start)
 
