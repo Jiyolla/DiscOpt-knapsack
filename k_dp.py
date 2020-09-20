@@ -3,6 +3,7 @@
 
 import numpy as np
 
+
 def solve(item_count, capacity, items):
     # DP implementation
     value = 0

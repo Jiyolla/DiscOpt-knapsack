@@ -1,10 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import argparse
 import cProfile
 import configparser
 import importlib
-import numpy
 import timeit
 from collections import namedtuple
 
@@ -24,8 +24,8 @@ def set_kernel(kernel):
             config.write(configfile)
 
 
-def solve_it(input_data):
-    # parse the input
+def solve_it(input_data, profile=False):
+    # Parse the input
     lines = input_data.split("\n")
     firstLine = lines[0].split()
     item_count = int(firstLine[0])
@@ -36,27 +36,31 @@ def solve_it(input_data):
         parts = line.split()
         items.append(Item(i - 1, int(parts[0]), int(parts[1])))
 
-    config = configparser.ConfigParser()
-    solver = None
-    value = 0
-    taken = numpy.zeros(item_count, dtype=numpy.int32)
+    # Load kernel
     with open('setting.ini') as f:
+        config = configparser.ConfigParser()
         config.read_file(f)
         kernel = config['Default Kernel']['name']
-        compute = importlib.import_module(kernel)
-        prof = cProfile.Profile()
-        value, taken = prof.runcall(compute.solve, item_count, capacity, items)
-        prof.print_stats(1)
-        num_run = [1, 3, 5, 10]
-        for i in num_run:
-            avg = (
-                timeit.timeit(
-                    'compute.solve(item_count, capacity, items)', number=i, globals=locals()
-                )
-                / i
-            )
-            print(f'Average of {i} run(s): {avg}')
+        solver = importlib.import_module(kernel)
 
+        # Compute with kernel
+        if profile:
+            print(f'Running with kernel={kernel}\n')
+            prof = cProfile.Profile()
+            value, taken = prof.runcall(solver.solve, item_count, capacity, items)
+            prof.print_stats(1)
+            print(f'value = {value}\ntaken = {taken}')
+            num_run = [1, 3, 5, 10]
+            for i in num_run:
+                avg = (
+                    timeit.timeit(
+                        'solver.solve(item_count, capacity, items)', number=i, globals=locals()
+                    )
+                    / i
+                )
+                print(f'Average of {i} run(s): {avg}')
+        else:
+            value, taken = solver.solve(item_count, capacity, items)
 
     # prepare the solution in the specified output format
     output_data = f'{value} 1\n'
@@ -65,14 +69,17 @@ def solve_it(input_data):
 
 
 if __name__ == "__main__":
-    import sys
+    parser = argparse.ArgumentParser(description='Solve knapsack problems')
+    parser.add_argument('data_file_name', metavar='Data_File_Path', type=str, # nargs='+',
+                        help='data file path')
+    parser.add_argument('-k', dest='kernel', action='store',
+                        help='Set default kernel')
+    parser.add_argument('-p', dest='profile', action='store_true',
+                        help='Show profiling stats')
 
-    if len(sys.argv) > 1:
-        file_location = sys.argv[1].strip()
-        with open(file_location, "r") as input_data_file:
-            input_data = input_data_file.read()
-        print(solve_it(input_data))
-    else:
-        print(
-            "This test requires an input file.  Please select one from the data directory. (i.e. python solver.py ./data/ks_4_0)"
-        )
+    args = parser.parse_args()
+    # set kernel if specified
+    if args.kernel:
+        set_kernel(args.kernel.replace('.py', ''))
+    with open(args.data_file_name, "r") as input_data_file:
+        print(solve_it(input_data_file.read(), args.profile))
