@@ -2,60 +2,64 @@
 # -*- coding: utf-8 -*-
 
 import cProfile
-import timeit
+import configparser
+import importlib
 import numpy
+import timeit
 from collections import namedtuple
 
 Item = namedtuple("Item", ["index", "value", "weight"])
-Oracle_cache = namedtuple("Oracle_cache", ["n", "k"])
+
+
+def set_kernel(kernel):
+    config = configparser.ConfigParser()
+    with open('setting.ini', 'r') as f:
+        config.read_file(f)
+        kernels = config['Supported Kernels']
+        if kernel not in kernels:
+            kernels[kernel] = str(len(kernels))
+        config['Default Kernel'] = {'name': kernel,
+                                    'code': kernels[kernel]}
+        with open('setting.ini', 'w') as configfile:
+            config.write(configfile)
 
 
 def solve_it(input_data):
-    # Modify this code to run your optimization algorithm
-
     # parse the input
     lines = input_data.split("\n")
-
     firstLine = lines[0].split()
     item_count = int(firstLine[0])
     capacity = int(firstLine[1])
-
     items = []
-
     for i in range(1, item_count + 1):
         line = lines[i]
         parts = line.split()
         items.append(Item(i - 1, int(parts[0]), int(parts[1])))
 
-    # DP implementation with vectorized computation by numpy
-    table = numpy.zeros((item_count + 1, capacity + 1), dtype=numpy.int32)
-
-    # start = timeit.default_timer()
-    for i in range(1, item_count + 1):
-        item = items[i - 1]
-        threshold = min(item.weight, capacity + 1)
-        table[i][0:threshold] = table[i - 1][0:threshold]
-        j = numpy.arange(capacity + 1 - threshold) + threshold
-        j_m_iw = j - item.weight
-        v_take = item.value + table[i - 1][j_m_iw]
-        table[i][threshold : capacity + 1] = numpy.maximum(
-            v_take, table[i - 1][threshold : capacity + 1]
-        )
-    # end = timeit.default_timer()
-    # print(end - start)
-
-    value = table[item_count][capacity]
+    config = configparser.ConfigParser()
+    solver = None
+    value = 0
     taken = numpy.zeros(item_count, dtype=numpy.int32)
-    remaining_capacity = capacity
-    for i in range(item_count, 0, -1):
-        if table[i][remaining_capacity] != table[i - 1][remaining_capacity]:
-            taken[i - 1] = 1
-            remaining_capacity -= items[i - 1].weight
-        else:
-            taken[i - 1] = 0
+    with open('setting.ini') as f:
+        config.read_file(f)
+        kernel = config['Default Kernel']['name']
+        compute = importlib.import_module(kernel)
+        prof = cProfile.Profile()
+        value, taken = prof.runcall(compute.solve, item_count, capacity, items)
+        prof.print_stats(1)
+        num_run = [1, 3, 5, 10]
+        for i in num_run:
+            avg = (
+                timeit.timeit(
+                    'compute.solve(item_count, capacity, items)', number=i, globals=locals()
+                )
+                / i
+            )
+            print(f'Average of {i} run(s): {avg}')
+
 
     # prepare the solution in the specified output format
-    output_data = str(value) + " " + str(1) + "\n"
+    output_data = f'{value} 1\n'
     output_data += " ".join(map(str, taken))
     return output_data
 
@@ -67,8 +71,6 @@ if __name__ == "__main__":
         file_location = sys.argv[1].strip()
         with open(file_location, "r") as input_data_file:
             input_data = input_data_file.read()
-        # cProfile.run('print(solve_it(input_data))')
-        # print(timeit.timeit('print(solve_it(input_data))', number=10, globals=globals()))
         print(solve_it(input_data))
     else:
         print(
